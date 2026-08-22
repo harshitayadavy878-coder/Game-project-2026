@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carrom Game</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #222;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    margin: 15px;
+}
+
+#menu {
+    background: #333;
+    padding: 20px;
+    max-width: 650px;
+    margin: 15px auto;
+    border-radius: 12px;
+}
+
+button {
+    padding: 12px 20px;
+    margin: 6px;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.playerBtn {
+    background: #e3a458;
+}
+
+#shootBtn {
+    background: #45a85a;
+    color: white;
+}
+
+#diceBtn {
+    background: #e3a458;
+}
+
+#resetBtn {
+    background: #d9534f;
+    color: white;
+}
+
+#turn {
+    background: #9b5d2b;
+    max-width: 650px;
+    margin: 10px auto;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#scores {
+    max-width: 650px;
+    margin: 10px auto;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.player {
+    background: #444;
+    padding: 10px 15px;
+    border-radius: 8px;
+}
+
+.current {
+    background: #e3a458;
+    color: black;
+    border: 3px solid white;
+}
+
+#boardBox {
+    width: min(92vw, 650px);
+    margin: 15px auto;
+    padding: 15px;
+    background: #713d1d;
+    border-radius: 10px;
+}
+
+canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #e5b56c;
+    touch-action: none;
+}
+
+#controls {
+    max-width: 650px;
+    margin: 10px auto;
+    padding: 15px;
+    background: #333;
+    border-radius: 10px;
+}
+
+input {
+    width: 200px;
+}
+
+#dice {
+    display: inline-flex;
+    width: 50px;
+    height: 50px;
+    background: white;
+    color: black;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 25px;
+    margin: 8px;
+}
+
+#message {
+    margin: 10px;
+    min-height: 25px;
+    font-weight: bold;
+}
+
+#rules {
+    max-width: 650px;
+    margin: 15px auto;
+    padding: 15px;
+    background: #333;
+    border-radius: 10px;
+    text-align: left;
+}
+
+.hidden {
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎯 Carrom Game</h1>
+
+<div id="menu">
+
+    <h2>👥 Select Players</h2>
+
+    <button class="playerBtn" onclick="startGame(2)">
+        👥 2 Players
+    </button>
+
+    <button class="playerBtn" onclick="startGame(4)">
+        👥 4 Players
+    </button>
+
+</div>
+
+<div id="turn" class="hidden">
+    Player 1's Turn
+</div>
+
+<div id="scores"></div>
+
+<div id="boardBox" class="hidden">
+
+    <canvas id="board" width="600" height="600"></canvas>
+
+</div>
+
+<div id="controls" class="hidden">
+
+    <p>
+        🎯 Aim:
+        <input
+            type="range"
+            id="angle"
+            min="0"
+            max="360"
+            value="270"
+        >
+    </p>
+
+    <p>
+        💥 Power:
+        <input
+            type="range"
+            id="power"
+            min="5"
+            max="25"
+            value="12"
+        >
+    </p>
+
+    <button id="shootBtn" onclick="shoot()">
+        🎯 SHOOT
+    </button>
+
+    <button id="diceBtn" onclick="rollDice()">
+        🎲 ROLL DICE
+    </button>
+
+    <button id="resetBtn" onclick="resetGame()">
+        🔄 RESET
+    </button>
+
+    <br>
+
+    🎲 Dice:
+    <span id="dice">-</span>
+
+    <div id="message">
+        Select players to start.
+    </div>
+
+</div>
+
+<div id="rules">
+
+    <h2>📖 How to Play</h2>
+
+    <ul>
+        <li>Select 2 or 4 players.</li>
+        <li>🔵 Blue piece is the striker.</li>
+        <li>⚫ Black and ⚪ white pieces are coins.</li>
+        <li>🔴 Red piece is the queen.</li>
+        <li>⚫ Put coins into the pockets to score.</li>
+        <li>🎯 Set aim and power, then press SHOOT.</li>
+        <li>🎲 Roll the dice during your turn.</li>
+        <li>The turn changes automatically.</li>
+    </ul>
+
+</div>
+
+
+<script>
+
+const canvas = document.getElementById("board");
+const ctx = canvas.getContext("2d");
+
+const SIZE = 600;
+
+let playerCount = 0;
+let currentPlayer = 0;
+
+let scores = [];
+
+let striker;
+
+let coins = [];
+
+let isMoving = false;
+
+
+/* =========================
+   POCKETS
+========================= */
+
+const pockets = [
+    {x: 35, y: 35},
+    {x: 565, y: 35},
+    {x: 35, y: 565},
+    {x: 565, y: 565}
+];
+
+
+/* =========================
+   START GAME
+========================= */
+
+function startGame(number) {
+
+    playerCount = number;
+
+    currentPlayer = 0;
+
+    scores = [];
+
+    for (let i = 0; i < number; i++) {
+        scores.push(0);
+    }
+
+    document
+        .getElementById("menu")
+        .classList.add("hidden");
+
+    document
+        .getElementById("turn")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("boardBox")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("controls")
+        .classList.remove("hidden");
+
+    createPieces();
+
+    updateInfo();
+
+    draw();
+
+    document.getElementById("message").textContent =
+        "Player 1: Set your aim and press SHOOT.";
+
+}
+
+
+/* =========================
+   CREATE ALL PIECES
+========================= */
+
+function createPieces() {
+
+    /* STRIKER */
+
+    striker = {
+        x: 300,
+        y: 520,
+        r: 16,
+        vx: 0,
+        vy: 0,
+        active: true
+    };
+
+
+    coins = [];
+
+
+    /*
+       RED QUEEN
+    */
+
+    coins.push({
+        x: 300,
+        y: 300,
+        r: 13,
+        color: "#d62828",
+        queen: true,
+        vx: 0,
+        vy: 0,
+        active: true
+    });
+
+
+    /*
+       18 COINS
+       Six coins in inner circle
+    */
+
+    const innerPositions = [
+
+        [300, 270],
+        [326, 285],
+        [326, 315],
+        [300, 330],
+        [274, 315],
+        [274, 285]
+
+    ];
+
+
+    for (let i = 0; i < innerPositions.length; i++) {
+
+        coins.push({
+
+            x: innerPositions[i][0],
+
+            y: innerPositions[i][1],
+
+            r: 12,
+
+            color:
+                i % 2 === 0
+                    ? "#111111"
+                    : "#ffffff",
+
+            queen: false,
+
+            vx: 0,
+            vy: 0,
+
+            active: true
+
+        });
+
+    }
+
+
+    /*
+       12 OUTER COINS
+    */
+
+    for (let i = 0; i < 12; i++) {
+
+        const angle =
+            (Math.PI * 2 / 12) * i;
+
+        coins.push({
+
+            x:
+                300 +
+                Math.cos(angle) * 60,
+
+            y:
+                300 +
+                Math.sin(angle) * 60,
+
+            r: 12,
+
+            color:
+                i % 2 === 0
+                    ? "#111111"
+                    : "#ffffff",
+
+            queen: false,
+
+            vx: 0,
+            vy: 0,
+
+            active: true
+
+        });
+
+    }
+
+}
+
+
+/* =========================
+   UPDATE SCORE
+========================= */
+
+function updateInfo() {
+
+    document.getElementById("turn").textContent =
+        "🎯 Player " +
+        (currentPlayer + 1) +
+        "'s Turn";
+
+
+    const scoreBox =
+        document.getElementById("scores");
+
+    scoreBox.innerHTML = "";
+
+
+    for (let i = 0; i < playerCount; i++) {
+
+        const div =
+            document.createElement("div");
+
+        div.className = "player";
+
+
+        if (i === currentPlayer) {
+
+            div.classList.add("current");
+
+        }
+
+
+        div.innerHTML =
+            "👤 Player " +
+            (i + 1) +
+            "<br>" +
+            "🏆 Score: " +
+            scores[i];
+
+
+        scoreBox.appendChild(div);
+
+    }
+
+}
+
+
+/* =========================
+   DRAW BOARD
+========================= */
+
+function drawBoard() {
+
+    ctx.clearRect(
+        0,
+        0,
+        SIZE,
+        SIZE
+    );
+
+
+    /*
+       WOOD
+    */
+
+    ctx.fillStyle = "#e5b56c";
+
+    ctx.fillRect(
+        0,
+        0,
+        SIZE,
+        SIZE
+    );
+
+
+    /*
+       BORDER
+    */
+
+    ctx.strokeStyle = "#713d1d";
+
+    ctx.lineWidth = 8;
+
+    ctx.strokeRect(
+        20,
+        20,
+        560,
+        560
+    );
+
+
+    /*
+       INNER PLAYING AREA
+    */
+
+    ctx.strokeStyle = "#8b451f";
+
+    ctx.lineWidth = 3;
+
+    ctx.strokeRect(
+        70,
+        70,
+        460,
+        460
+    );
+
+
+    /*
+       POCKETS
+    */
+
+    for (const pocket of pockets) {
+
+        ctx.beginPath();
+
+        ctx.arc(
+            pocket.x,
+            pocket.y,
+            28,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle = "#111";
+
+        ctx.fill();
+
+    }
+
+
+    /*
+       CENTER CIRCLE
+    */
+
+    ctx.beginPath();
+
+    ctx.arc(
+        300,
+        300,
+        70,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.strokeStyle = "#8b451f";
+
+    ctx.lineWidth = 3;
+
+    ctx.stroke();
+
+}
+
+
+/* =========================
+   DRAW COIN
+========================= */
+
+function drawCoin(piece) {
+
+    if (!piece.active) {
+        return;
+    }
+
+
+    /*
+       SHADOW
+    */
+
+    ctx.beginPath();
+
+    ctx.arc(
+        piece.x + 2,
+        piece.y + 2,
+        piece.r,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+
+    ctx.fill();
+
+
+    /*
+       COIN
+    */
+
+    ctx.beginPath();
+
+    ctx.arc(
+        piece.x,
+        piece.y,
+        piece.r,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = piece.color;
+
+    ctx.fill();
+
+
+    /*
+       BORDER
+    */
+
+    ctx.strokeStyle = "#333";
+
+    ctx.lineWidth = 2;
+
+    ctx.stroke();
+
+
+    /*
+       QUEEN MARK
+    */
+
+    if (piece.queen) {
+
+        ctx.beginPath();
+
+        ctx.arc(
+            piece.x,
+            piece.y,
+            5,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle = "#ffffff";
+
+        ctx.fill();
+
+    }
+
+}
+
+
+/* =========================
+   DRAW STRIKER
+========================= */
+
+function drawStriker() {
+
+    if (!striker.active) {
+        return;
+    }
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        striker.x,
+        striker.y,
+        striker.r,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "#1976d2";
+
+    ctx.fill();
+
+
+    ctx.strokeStyle = "#ffffff";
+
+    ctx.lineWidth = 3;
+
+    ctx.stroke();
+
+
+    /*
+       STRIKER CENTER
+    */
+
+    ctx.beginPath();
+
+    ctx.arc(
+        striker.x,
+        striker.y,
+        5,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "#ffffff";
+
+    ctx.fill();
+
+}
+
+
+/* =========================
+   DRAW EVERYTHING
+========================= */
+
+function draw() {
+
+    drawBoard();
+
+
+    /*
+       DRAW COINS
+    */
+
+    for (const coin of coins) {
+
+        drawCoin(coin);
+
+    }
+
+
+    /*
+       DRAW STRIKER
+    */
+
+    drawStriker();
+
+}
+
+
+/* =========================
+   SHOOT
+========================= */
+
+function shoot() {
+
+    if (playerCount === 0) {
+
+        alert(
+            "Please select 2 or 4 players first."
+        );
+
+        return;
+
+    }
+
+
+    if (isMoving) {
+        return;
+    }
+
+
+    const angle =
+        Number(
+            document.getElementById("angle").value
+        ) *
+        Math.PI / 180;
+
+
+    const power =
+        Number(
+            document.getElementById("power").value
+        );
+
+
+    striker.vx =
+        Math.cos(angle) * power;
+
+
+    striker.vy =
+        Math.sin(angle) * power;
+
+
+    isMoving = true;
+
+
+    document.getElementById("message").textContent =
+        "🎯 Player " +
+        (currentPlayer + 1) +
+        " is shooting...";
+
+}
+
+
+/* =========================
+   MOVE
+========================= */
+
+function move(piece) {
+
+    if (!piece.active) {
+        return;
+    }
+
+
+    piece.x += piece.vx;
+
+    piece.y += piece.vy;
+
+
+    /*
+       FRICTION
+    */
+
+    piece.vx *= 0.985;
+
+    piece.vy *= 0.985;
+
+
+    if (Math.abs(piece.vx) < 0.05) {
+        piece.vx = 0;
+    }
+
+
+    if (Math.abs(piece.vy) < 0.05) {
+        piece.vy = 0;
+    }
+
+
+    /*
+       WALL
+    */
+
+    if (piece.x - piece.r < 70) {
+
+        piece.x = 70 + piece.r;
+
+        piece.vx *= -0.8;
+
+    }
+
+
+    if (piece.x + piece.r > 530) {
+
+        piece.x = 530 - piece.r;
+
+        piece.vx *= -0.8;
+
+    }
+
+
+    if (piece.y - piece.r < 70) {
+
+        piece.y = 70 + piece.r;
+
+        piece.vy *= -0.8;
+
+    }
+
+
+    if (piece.y + piece.r > 530) {
+
+        piece.y = 530 - piece.r;
+
+        piece.vy *= -0.8;
+
+    }
+
+
+    /*
+       POCKET
+    */
+
+    for (const pocket of pockets) {
+
+        const dx =
+            piece.x - pocket.x;
+
+        const dy =
+            piece.y - pocket.y;
+
+
+        const distance =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+
+        if (distance < 28) {
+
+            pocketed(piece);
+
+            return;
+
+        }
+
+    }
+
+}
+
+
+/* =========================
+   POCKETED
+========================= */
+
+function pocketed(piece) {
+
+    piece.active = false;
+
+
+    /*
+       STRIKER
+    */
+
+    if (piece === striker) {
+
+        scores[currentPlayer] =
+            Math.max(
+                0,
+                scores[currentPlayer] - 1
+            );
+
+
+        document.getElementById("message").textContent =
+            "❌ Striker pocketed!";
+
+    }
+
+
+    /*
+       QUEEN
+    */
+
+    else if (piece.queen) {
+
+        scores[currentPlayer] += 3;
+
+
+        document.getElementById("message").textContent =
+            "👑 Queen pocketed! +3";
+
+    }
+
+
+    /*
+       NORMAL COIN
+    */
+
+    else {
+
+        scores[currentPlayer] += 1;
+
+
+        document.getElementById("message").textContent =
+            "🎯 Coin pocketed! +1";
+
+    }
+
+
+    updateInfo();
+
+}
+
+
+/* =========================
+   COLLISION
+========================= */
+
+function collision(a, b) {
+
+    if (!a.active || !b.active) {
+        return;
+    }
+
+
+    const dx = b.x - a.x;
+
+    const dy = b.y - a.y;
+
+
+    const distance =
+        Math.sqrt(
+            dx * dx +
+            dy * dy
+        );
+
+
+    const minimum =
+        a.r + b.r;
+
+
+    if (
+        distance > 0 &&
+        distance < minimum
+    ) {
+
+        const nx =
+            dx / distance;
+
+        const ny =
+            dy / distance;
+
+
+        const overlap =
+            minimum - distance;
+
+
+        a.x -=
+            nx * overlap / 2;
+
+        a.y -=
+            ny * overlap / 2;
+
+
+        b.x +=
+            nx * overlap / 2;
+
+        b.y +=
+            ny * overlap / 2;
+
+
+        const relative =
+            (a.vx - b.vx) * nx +
+            (a.vy - b.vy) * ny;
+
+
+        if (relative > 0) {
+            return;
+        }
+
+
+        a.vx -=
+            relative * nx;
+
+        a.vy -=
+            relative * ny;
+
+
+        b.vx +=
+            relative * nx;
+
+        b.vy +=
+            relative * ny;
+
+    }
+
+}
+
+
+/* =========================
+   UPDATE
+========================= */
+
+function update() {
+
+    if (!isMoving) {
+        return;
+    }
+
+
+    move(striker);
+
+
+    for (const coin of coins) {
+
+        move(coin);
+
+    }
+
+
+    /*
+       STRIKER + COINS
+    */
+
+    for (const coin of coins) {
+
+        collision(
+            striker,
+            coin
+        );
+
+    }
+
+
+    /*
+       COINS + COINS
+    */
+
+    for (let i = 0; i < coins.length; i++) {
+
+        for (
+            let j = i + 1;
+            j < coins.length;
+            j++
+        ) {
+
+            collision(
+                coins[i],
+                coins[j]
+            );
+
+        }
+
+    }
+
+
+    /*
+       CHECK MOVEMENT
+    */
+
+    let movingSomething = false;
+
+
+    if (
+        Math.abs(striker.vx) > 0.05 ||
+        Math.abs(striker.vy) > 0.05
+    ) {
+
+        movingSomething = true;
+
+    }
+
+
+    for (const coin of coins) {
+
+        if (!coin.active) {
+            continue;
+        }
+
+
+        if (
+            Math.abs(coin.vx) > 0.05 ||
+            Math.abs(coin.vy) > 0.05
+        ) {
+
+            movingSomething = true;
+
+        }
+
+    }
+
+
+    /*
+       TURN FINISHED
+    */
+
+    if (!movingSomething) {
+
+        finishTurn();
+
+    }
+
+}
+
+
+/* =========================
+   FINISH TURN
+========================= */
+
+function finishTurn() {
+
+    isMoving = false;
+
+
+    striker.x = 300;
+
+    striker.y = 520;
+
+    striker.vx = 0;
+
+    striker.vy = 0;
+
+    striker.active = true;
+
+
+    /*
+       CHANGE PLAYER
+    */
+
+    currentPlayer++;
+
+
+    if (
+        currentPlayer >= playerCount
+    ) {
+
+        currentPlayer = 0;
+
+    }
+
+
+    updateInfo();
+
+
+    document.getElementById("message").textContent =
+        "➡️ Player " +
+        (currentPlayer + 1) +
+        "'s turn.";
+
+}
+
+
+/* =========================
+   DICE
+========================= */
+
+function rollDice() {
+
+    if (playerCount === 0) {
+
+        alert(
+            "Please select players first."
+        );
+
+        return;
+
+    }
+
+
+    if (isMoving) {
+        return;
+    }
+
+
+    const value =
+        Math.floor(
+            Math.random() * 6
+        ) + 1;
+
+
+    document.getElementById("dice").textContent =
+        value;
+
+
+    document.getElementById("message").textContent =
+        "🎲 Player " +
+        (currentPlayer + 1) +
+        " rolled " +
+        value;
+
+}
+
+
+/* =========================
+   RESET
+========================= */
+
+function resetGame() {
+
+    if (playerCount === 0) {
+        return;
+    }
+
+
+    currentPlayer = 0;
+
+    scores =
+        new Array(playerCount).fill(0);
+
+
+    document.getElementById("dice").textContent =
+        "-";
+
+
+    createPieces();
+
+    updateInfo();
+
+    draw();
+
+
+    document.getElementById("message").textContent =
+        "🔄 New game! Player 1's turn.";
+
+}
+
+
+/* =========================
+   LOOP
+========================= */
+
+function gameLoop() {
+
+    update();
+
+    draw();
+
+    requestAnimationFrame(gameLoop);
+
+}
+
+
+createPieces();
+
+draw();
+
+gameLoop();
+
+</script>
+
+</body>
+</html>

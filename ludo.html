@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Ludo Game</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:linear-gradient(135deg,#182848,#4b6cb7);
+    color:#fff;
+    text-align:center;
+}
+
+h1{
+    margin:15px 0 5px;
+}
+
+#setup{
+    background:#fff;
+    color:#222;
+    width:min(92%,420px);
+    margin:25px auto;
+    padding:25px;
+    border-radius:18px;
+    box-shadow:0 10px 30px #0005;
+}
+
+#setup h2{
+    margin-top:0;
+}
+
+.playerButtons button,
+#rollBtn,
+#newGameBtn{
+    border:0;
+    border-radius:10px;
+    padding:12px 20px;
+    margin:6px;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.playerButtons button{
+    background:#eee;
+}
+
+.playerButtons button.selected{
+    background:#222;
+    color:white;
+}
+
+#startBtn{
+    margin-top:15px;
+    padding:13px 35px;
+    border:0;
+    border-radius:10px;
+    background:#222;
+    color:white;
+    font-size:17px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+#game{
+    display:none;
+}
+
+#status{
+    width:min(94%,600px);
+    margin:10px auto;
+    background:#ffffff18;
+    padding:12px;
+    border-radius:12px;
+}
+
+#turnText{
+    font-size:22px;
+    font-weight:bold;
+}
+
+#instruction{
+    margin-top:5px;
+}
+
+#diceArea{
+    margin:12px;
+}
+
+#dice{
+    width:70px;
+    height:70px;
+    margin:10px auto;
+    background:white;
+    color:#222;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:42px;
+    font-weight:bold;
+    box-shadow:0 5px 15px #0005;
+}
+
+#dice.rolling{
+    animation:shake .12s infinite;
+}
+
+@keyframes shake{
+    0%{transform:rotate(0deg) scale(1)}
+    25%{transform:rotate(8deg) scale(1.08)}
+    50%{transform:rotate(-8deg) scale(1.12)}
+    75%{transform:rotate(6deg) scale(1.08)}
+    100%{transform:rotate(0deg) scale(1)}
+}
+
+#board{
+    width:min(94vw,600px);
+    height:min(94vw,600px);
+    margin:10px auto;
+    display:block;
+    background:white;
+    border:6px solid #111;
+    border-radius:8px;
+    touch-action:manipulation;
+}
+
+#message{
+    min-height:30px;
+    font-size:17px;
+    font-weight:bold;
+}
+
+#rollBtn{
+    background:#ffca28;
+    color:#222;
+}
+
+#rollBtn:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+}
+
+#newGameBtn{
+    background:white;
+    color:#222;
+}
+
+#winner{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:#0009;
+    align-items:center;
+    justify-content:center;
+    z-index:20;
+}
+
+#winnerBox{
+    background:white;
+    color:#222;
+    padding:35px;
+    width:min(90%,400px);
+    border-radius:20px;
+    box-shadow:0 10px 40px #000;
+}
+
+#winnerBox h2{
+    font-size:30px;
+}
+
+#winnerBox button{
+    padding:12px 25px;
+    border:0;
+    border-radius:10px;
+    background:#222;
+    color:white;
+    font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎲 My Ludo Game</h1>
+
+<!-- PLAYER SELECTION -->
+<div id="setup">
+
+    <h2>Choose Players</h2>
+    <p>How many people will play?</p>
+
+    <div class="playerButtons">
+        <button onclick="selectPlayers(2)" id="p2">2 Players</button>
+        <button onclick="selectPlayers(3)" id="p3">3 Players</button>
+        <button onclick="selectPlayers(4)" id="p4" class="selected">4 Players</button>
+    </div>
+
+    <p id="selectedText">4 players selected</p>
+
+    <button id="startBtn" onclick="startGame()">
+        START GAME
+    </button>
+
+</div>
+
+<!-- GAME -->
+<div id="game">
+
+    <div id="status">
+        <div id="turnText">Red Player's Turn</div>
+        <div id="instruction">
+            Roll the dice to start your turn.
+        </div>
+    </div>
+
+    <div id="diceArea">
+        <div id="dice">🎲</div>
+
+        <button id="rollBtn" onclick="rollDice()">
+            ROLL DICE
+        </button>
+    </div>
+
+    <canvas id="board" width="600" height="600"></canvas>
+
+    <div id="message">
+        Red Player: roll the dice!
+    </div>
+
+    <button id="newGameBtn" onclick="location.reload()">
+        NEW GAME
+    </button>
+
+</div>
+
+<!-- WINNER -->
+<div id="winner">
+
+    <div id="winnerBox">
+        <h2>🎉 Congratulations!</h2>
+        <p id="winnerText"></p>
+
+        <button onclick="location.reload()">
+            PLAY AGAIN
+        </button>
+    </div>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("board");
+const ctx = canvas.getContext("2d");
+
+let playerCount = 4;
+let currentPlayer = 0;
+let diceValue = 0;
+let waitingForToken = false;
+let gameOver = false;
+
+const playerData = [
+    {
+        name:"Red",
+        color:"#e53935",
+        light:"#ffcdd2",
+        start:0
+    },
+    {
+        name:"Green",
+        color:"#2e9d46",
+        light:"#c8e6c9",
+        start:13
+    },
+    {
+        name:"Yellow",
+        color:"#fbc02d",
+        light:"#fff9c4",
+        start:26
+    },
+    {
+        name:"Blue",
+        color:"#1976d2",
+        light:"#bbdefb",
+        start:39
+    }
+];
+
+let players=[];
+
+/*
+    Track positions:
+    0 - 51 = main track
+    52 - 57 = home path
+    -1 = token inside yard
+*/
+
+const track=[];
+
+for(let i=0;i<52;i++){
+
+    const angle =
+        (Math.PI*2*i/52)-Math.PI/2;
+
+    track.push({
+        x:300+Math.cos(angle)*205,
+        y:300+Math.sin(angle)*205
+    });
+}
+
+
+/* ---------------- PLAYER SELECTION ---------------- */
+
+function selectPlayers(number){
+
+    playerCount=number;
+
+    document.querySelectorAll(".playerButtons button")
+        .forEach(btn=>btn.classList.remove("selected"));
+
+    document.getElementById("p"+number)
+        .classList.add("selected");
+
+    document.getElementById("selectedText")
+        .textContent=number+" players selected";
+}
+
+
+/* ---------------- START GAME ---------------- */
+
+function startGame(){
+
+    players=[];
+
+    for(let i=0;i<playerCount;i++){
+
+        players.push({
+            ...playerData[i],
+            tokens:[-1,-1,-1,-1]
+        });
+    }
+
+    currentPlayer=0;
+    diceValue=0;
+    waitingForToken=false;
+    gameOver=false;
+
+    document.getElementById("setup").style.display="none";
+    document.getElementById("game").style.display="block";
+
+    updateStatus();
+    drawBoard();
+}
+
+
+/* ---------------- BOARD ---------------- */
+
+function drawBoard(){
+
+    ctx.clearRect(0,0,600,600);
+
+    // Background
+    ctx.fillStyle="#f4f4f4";
+    ctx.fillRect(0,0,600,600);
+
+    // Four yards
+    drawYard(0,0,playerData[0]);
+    drawYard(300,0,playerData[1]);
+    drawYard(0,300,playerData[2]);
+    drawYard(300,300,playerData[3]);
+
+    // Track
+    track.forEach((p,index)=>{
+
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,17,0,Math.PI*2);
+
+        ctx.fillStyle="#fff";
+        ctx.fill();
+
+        ctx.strokeStyle="#333";
+        ctx.lineWidth=1.5;
+        ctx.stroke();
+
+        // Starting spaces
+        const startPlayer =
+            playerData.findIndex(p=>p.start===index);
+
+        if(startPlayer>=0){
+
+            ctx.beginPath();
+            ctx.arc(p.x,p.y,17,0,Math.PI*2);
+
+            ctx.fillStyle=
+                playerData[startPlayer].color;
+
+            ctx.fill();
+
+            ctx.strokeStyle="#222";
+            ctx.stroke();
+        }
+    });
+
+    // Center
+    drawCenter();
+
+    // Tokens
+    players.forEach((player,pIndex)=>{
+
+        player.tokens.forEach((position,tIndex)=>{
+
+            const pos=getTokenXY(
+                pIndex,
+                tIndex,
+                position
+            );
+
+            drawToken(
+                pos.x,
+                pos.y,
+                player.color,
+                tIndex+1,
+                position>=0 &&
+                position<58 &&
+                canMoveToken(position)
+            );
+
+        });
+
+    });
+
+}
+
+
+/* ---------------- YARDS ---------------- */
+
+function drawYard(x,y,player){
+
+    ctx.fillStyle=player.color;
+    ctx.fillRect(x,y,300,300);
+
+    ctx.fillStyle="#fff";
+    ctx.fillRect(x+45,y+45,210,210);
+
+    const spots=[
+        [x+95,y+95],
+        [x+205,y+95],
+        [x+95,y+205],
+        [x+205,y+205]
+    ];
+
+    spots.forEach(s=>{
+
+        ctx.beginPath();
+        ctx.arc(s[0],s[1],30,0,Math.PI*2);
+
+        ctx.fillStyle=player.light;
+        ctx.fill();
+
+        ctx.strokeStyle="#222";
+        ctx.lineWidth=2;
+        ctx.stroke();
+    });
+}
+
+
+/* ---------------- CENTER ---------------- */
+
+function drawCenter(){
+
+    ctx.beginPath();
+    ctx.moveTo(240,240);
+    ctx.lineTo(360,240);
+    ctx.lineTo(360,360);
+    ctx.lineTo(240,360);
+    ctx.closePath();
+
+    ctx.fillStyle="#fff";
+    ctx.fill();
+
+    // Four triangles
+    const triangles=[
+        ["#e53935",300,240,240,240,240,300],
+        ["#2e9d46",360,240,360,300,300,240],
+        ["#fbc02d",240,360,300,360,240,300],
+        ["#1976d2",360,360,300,360,360,300]
+    ];
+
+    triangles.forEach(t=>{
+
+        ctx.beginPath();
+
+        ctx.moveTo(t[1],t[2]);
+        ctx.lineTo(t[3],t[4]);
+        ctx.lineTo(t[5],t[6]);
+        ctx.closePath();
+
+        ctx.fillStyle=t[0];
+        ctx.fill();
+    });
+}
+
+
+/* ---------------- TOKEN POSITION ---------------- */
+
+function getTokenXY(playerIndex,tokenIndex,position){
+
+    // Inside yard
+    if(position===-1){
+
+        const locations=[
+            [[95,95],[205,95],[95,205],[205,205]],
+            [[395,95],[505,95],[395,205],[505,205]],
+            [[95,395],[205,395],[95,505],[205,505]],
+            [[395,395],[505,395],[395,505],[505,505]]
+        ];
+
+        return {
+            x:locations[playerIndex][tokenIndex][0],
+            y:locations[playerIndex][tokenIndex][1]
+        };
+    }
+
+    // Main track
+    if(position<52){
+
+        const globalPosition=
+            (playerData[playerIndex].start+position)%52;
+
+        return track[globalPosition];
+    }
+
+    // Home path
+    const step=position-52;
+
+    const start=playerData[playerIndex].start;
+
+    const angle=
+        (Math.PI*2*start/52)-Math.PI/2;
+
+    const distance=165-step*25;
+
+    return {
+        x:300+Math.cos(angle)*distance,
+        y:300+Math.sin(angle)*distance
+    };
+}
+
+
+/* ---------------- TOKEN DRAW ---------------- */
+
+function drawToken(x,y,color,number,highlight){
+
+    ctx.beginPath();
+    ctx.arc(x,y,18,0,Math.PI*2);
+
+    ctx.fillStyle=color;
+    ctx.fill();
+
+    ctx.strokeStyle=
+        highlight ? "#fff" : "#222";
+
+    ctx.lineWidth=
+        highlight ? 5 : 2;
+
+    ctx.stroke();
+
+    ctx.fillStyle="#fff";
+    ctx.font="bold 12px Arial";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+
+    ctx.fillText(number,x,y);
+}
+
+
+/* ---------------- DICE ---------------- */
+
+function rollDice(){
+
+    if(waitingForToken || gameOver) return;
+
+    const rollButton=
+        document.getElementById("rollBtn");
+
+    rollButton.disabled=true;
+
+    const dice=
+        document.getElementById("dice");
+
+    dice.classList.add("rolling");
+
+    let count=0;
+
+    const animation=setInterval(()=>{
+
+        dice.textContent=
+            Math.floor(Math.random()*6)+1;
+
+        count++;
+
+        if(count>=12){
+
+            clearInterval(animation);
+
+            diceValue=
+                Math.floor(Math.random()*6)+1;
+
+            dice.textContent=
+                diceValue;
+
+            dice.classList.remove("rolling");
+
+            afterDiceRoll();
+
+        }
+
+    },100);
+}
+
+
+/* ---------------- AFTER DICE ---------------- */
+
+function afterDiceRoll(){
+
+    const player=players[currentPlayer];
+
+    const movable=[];
+
+    player.tokens.forEach((position,index)=>{
+
+        if(isValidMove(position)){
+            movable.push(index);
+        }
+
+    });
+
+    if(movable.length===0){
+
+        document.getElementById("message").textContent=
+            `${player.name} rolled ${diceValue}, but no token can move.`;
+
+        document.getElementById("instruction").textContent=
+            "No valid move. Turn will change.";
+
+        setTimeout(()=>{
+
+            if(diceValue!==6){
+                nextTurn();
+            }else{
+                document.getElementById("rollBtn").disabled=false;
+
+                document.getElementById("message").textContent=
+                    `${player.name} rolled 6! Roll again.`;
+            }
+
+        },1200);
+
+        return;
+    }
+
+    waitingForToken=true;
+
+    document.getElementById("instruction").textContent=
+        "Choose a highlighted coin.";
+
+    document.getElementById("message").textContent=
+        `${player.name} rolled ${diceValue}. Click a highlighted coin.`;
+
+    drawBoard();
+}
+
+
+/* ---------------- VALID MOVE ---------------- */
+
+function isValidMove(position){
+
+    if(position===-1){
+        return diceValue===6;
+    }
+
+    if(position>=57){
+        return false;
+    }
+
+    return position+diceValue<=57;
+}
+
+
+/* ---------------- HIGHLIGHT CHECK ---------------- */
+
+function canMoveToken(position){
+
+    if(!waitingForToken) return false;
+
+    return isValidMove(position);
+}
+
+
+/* ---------------- BOARD CLICK ---------------- */
+
+canvas.addEventListener("click",function(event){
+
+    if(!waitingForToken || gameOver) return;
+
+    const rect=
+        canvas.getBoundingClientRect();
+
+    const x=
+        (event.clientX-rect.left)*
+        (600/rect.width);
+
+    const y=
+        (event.clientY-rect.top)*
+        (600/rect.height);
+
+    const player=players[currentPlayer];
+
+    for(let i=0;i<4;i++){
+
+        const position=player.tokens[i];
+
+        if(!isValidMove(position)) continue;
+
+        const p=
+            getTokenXY(
+                currentPlayer,
+                i,
+                position
+            );
+
+        const distance=
+            Math.hypot(x-p.x,y-p.y);
+
+        if(distance<28){
+
+            moveToken(i);
+            return;
+        }
+    }
+
+});
+
+
+/* ---------------- MOVE TOKEN ---------------- */
+
+function moveToken(index){
+
+    if(!waitingForToken) return;
+
+    const player=players[currentPlayer];
+
+    let position=player.tokens[index];
+
+    // Bring token out
+    if(position===-1){
+
+        position=0;
+
+        document.getElementById("message").textContent=
+            `${player.name} brought a coin onto the board!`;
+    }
+
+    else{
+
+        position+=diceValue;
+
+        document.getElementById("message").textContent=
+            `${player.name} moved coin ${index+1} by ${diceValue} spaces.`;
+    }
+
+    player.tokens[index]=position;
+
+    waitingForToken=false;
+
+    captureCoins();
+
+    drawBoard();
+
+    // Winner
+    if(player.tokens.every(t=>t===57)){
+
+        showWinner(player.name);
+        return;
+    }
+
+    // Six = another turn
+    if(diceValue===6){
+
+        document.getElementById("instruction").textContent=
+            `${player.name} gets another turn!`;
+
+        document.getElementById("message").textContent=
+            `${player.name} rolled a 6 🎲 Roll again!`;
+
+        document.getElementById("rollBtn").disabled=false;
+
+        return;
+    }
+
+    setTimeout(nextTurn,1000);
+}
+
+
+/* ---------------- CAPTURE ---------------- */
+
+function captureCoins(){
+
+    const current=players[currentPlayer];
+
+    const myTokens=current.tokens;
+
+    myTokens.forEach(position=>{
+
+        if(position<0 || position>=52) return;
+
+        const global=
+            (playerData[currentPlayer].start+
+            position)%52;
+
+        players.forEach((opponent,index)=>{
+
+            if(opponent===current) return;
+
+            opponent.tokens=
+                opponent.tokens.map(token=>{
+
+                    if(token>=0 && token<52){
+
+                        const opponentGlobal=
+                            (playerData[index].start+
+                            token)%52;
+
+                        if(opponentGlobal===global){
+
+                            document.getElementById("message").textContent=
+                                `${current.name} captured a ${opponent.name} coin! 💥`;
+
+                            return -1;
+                        }
+                    }
+
+                    return token;
+                });
+        });
+
+    });
+}
+
+
+/* ---------------- NEXT TURN ---------------- */
+
+function nextTurn(){
+
+    currentPlayer=
+        (currentPlayer+1)%playerCount;
+
+    diceValue=0;
+    waitingForToken=false;
+
+    document.getElementById("dice").textContent="🎲";
+
+    document.getElementById("rollBtn").disabled=false;
+
+    updateStatus();
+
+    drawBoard();
+}
+
+
+/* ---------------- STATUS ---------------- */
+
+function updateStatus(){
+
+    const player=players[currentPlayer];
+
+    document.getElementById("turnText").textContent=
+        `${player.name} Player's Turn`;
+
+    document.getElementById("turnText").style.color=
+        player.color;
+
+    document.getElementById("instruction").textContent=
+        "Roll the dice to start your turn.";
+
+    document.getElementById("message").textContent=
+        `${player.name} Player: roll the dice!`;
+}
+
+
+/* ---------------- WINNER ---------------- */
+
+function showWinner(name){
+
+    gameOver=true;
+
+    document.getElementById("winnerText").textContent=
+        `${name} Player has brought all 4 coins home!`;
+
+    document.getElementById("winner").style.display=
+        "flex";
+}
+
+</script>
+
+</body>
+</html>

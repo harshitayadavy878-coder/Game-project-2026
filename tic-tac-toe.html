@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f2f2f2;
+        }
+
+        h1 {
+            margin-top: 30px;
+        }
+
+        #status {
+            font-size: 20px;
+            margin: 20px;
+            font-weight: bold;
+        }
+
+        .board {
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+
+        .cell {
+            background-color: white;
+            border: 2px solid black;
+            font-size: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cell:hover {
+            background-color: #e6e6e6;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🎮 Tic Tac Toe</h1>
+
+    <div id="status">Player X's turn</div>
+
+    <div class="board">
+        <div class="cell" onclick="makeMove(0)"></div>
+        <div class="cell" onclick="makeMove(1)"></div>
+        <div class="cell" onclick="makeMove(2)"></div>
+
+        <div class="cell" onclick="makeMove(3)"></div>
+        <div class="cell" onclick="makeMove(4)"></div>
+        <div class="cell" onclick="makeMove(5)"></div>
+
+        <div class="cell" onclick="makeMove(6)"></div>
+        <div class="cell" onclick="makeMove(7)"></div>
+        <div class="cell" onclick="makeMove(8)"></div>
+    </div>
+
+    <button onclick="restartGame()">Restart Game</button>
+
+    <script>
+        let board = ["", "", "", "", "", "", "", "",];
+        let currentPlayer = "X";
+        let gameOver = false;
+
+        const cells = document.querySelectorAll(".cell");
+        const status = document.getElementById("status");
+
+        const winningCombinations = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6]
+        ];
+
+        function makeMove(index) {
+
+            if (board[index] !== "" || gameOver) {
+                return;
+            }
+
+            board[index] = currentPlayer;
+            cells[index].textContent = currentPlayer;
+
+            if (checkWinner()) {
+                status.textContent = "🎉 Player " + currentPlayer + " wins!";
+                gameOver = true;
+                return;
+            }
+
+            if (!board.includes("")) {
+                status.textContent = "🤝 It's a draw!";
+                gameOver = true;
+                return;
+            }
+
+            currentPlayer = currentPlayer === "X" ? "O" : "X";
+
+            status.textContent = "Player " + currentPlayer + "'s turn";
+        }
+
+        function checkWinner() {
+
+            for (let combination of winningCombinations) {
+
+                const a = combination[0];
+                const b = combination[1];
+                const c = combination[2];
+
+                if (
+                    board[a] !== "" &&
+                    board[a] === board[b] &&
+                    board[a] === board[c]
+                ) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        function restartGame() {
+
+            board = ["", "", "", "", "", "", "", "",];
+            currentPlayer = "X";
+            gameOver = false;
+
+            cells.forEach(function(cell) {
+                cell.textContent = "";
+            });
+
+            status.textContent = "Player X's turn";
+        }
+    </script>
+
+</body>
+</html>

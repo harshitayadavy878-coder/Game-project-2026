@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Game Zone</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #141e30, #243b55);
+    color: white;
+    text-align: center;
+    min-height: 100vh;
+}
+
+header {
+    padding: 30px 10px 15px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 42px;
+}
+
+header p {
+    color: #ddd;
+}
+
+.container {
+    width: 90%;
+    max-width: 750px;
+    margin: auto;
+    padding: 25px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 15px;
+}
+
+.form-group {
+    text-align: left;
+    margin-bottom: 18px;
+}
+
+label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: bold;
+}
+
+input {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 7px;
+    font-size: 16px;
+}
+
+.games {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.game {
+    background: white;
+    color: #222;
+    padding: 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 4px solid transparent;
+}
+
+.game:hover {
+    transform: translateY(-3px);
+}
+
+.game.selected {
+    border-color: #00d9a6;
+    background: #eafff8;
+}
+
+.emoji {
+    font-size: 45px;
+}
+
+.game h3 {
+    margin: 10px 0 5px;
+}
+
+.game p {
+    color: #555;
+}
+
+#applyBtn {
+    width: 100%;
+    padding: 14px;
+    margin-top: 25px;
+    border: none;
+    border-radius: 8px;
+    background: #00c896;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#message {
+    margin-top: 15px;
+    min-height: 25px;
+    font-weight: bold;
+}
+
+footer {
+    margin-top: 30px;
+    padding: 20px;
+    color: #bbb;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+
+<h1>🎮 Game Zone</h1>
+
+<p>Choose your game and start playing!</p>
+
+</header>
+
+
+<div class="container">
+
+<h2>👤 Player Information</h2>
+
+
+<div class="form-group">
+
+<label for="name">Name</label>
+
+<input
+    type="text"
+    id="name"
+    placeholder="Enter your name"
+>
+
+</div>
+
+
+<div class="form-group">
+
+<label for="email">Email</label>
+
+<input
+    type="email"
+    id="email"
+    placeholder="Enter your email"
+>
+
+</div>
+
+
+<h2>🎮 Select Game</h2>
+
+
+<div class="games">
+
+
+<div
+    class="game"
+    onclick="selectGame('Tic-Tac-Toe', this)"
+>
+
+<div class="emoji">❌⭕</div>
+
+<h3>Tic-Tac-Toe</h3>
+
+<p>Play X and O</p>
+
+</div>
+
+
+<div
+    class="game"
+    onclick="selectGame('Ludo', this)"
+>
+
+<div class="emoji">🎲</div>
+
+<h3>Ludo</h3>
+
+<p>Roll the dice</p>
+
+</div>
+
+
+<div
+    class="game"
+    onclick="selectGame('Carrom', this)"
+>
+
+<div class="emoji">🎯</div>
+
+<h3>Carrom</h3>
+
+<p>Strike the coins</p>
+
+</div>
+
+
+</div>
+
+
+<button
+    id="applyBtn"
+    onclick="applyGame()"
+>
+
+✅ APPLY & START GAME
+
+</button>
+
+
+<div id="message"></div>
+
+</div>
+
+
+<footer>
+
+🎮 Game Zone © 2026
+
+</footer>
+
+
+<script>
+
+let selectedGame = "";
+
+
+/* =========================
+   SELECT GAME
+========================= */
+
+function selectGame(game, element) {
+
+    selectedGame = game;
+
+
+    document
+        .querySelectorAll(".game")
+        .forEach(function(item) {
+
+            item.classList.remove("selected");
+
+        });
+
+
+    element.classList.add("selected");
+
+
+    document.getElementById("message").textContent =
+        "Selected: " + game;
+}
+
+
+/* =========================
+   APPLY AND OPEN GAME
+========================= */
+
+function applyGame() {
+
+    const name =
+        document.getElementById("name")
+        .value
+        .trim();
+
+
+    const email =
+        document.getElementById("email")
+        .value
+        .trim();
+
+
+    const message =
+        document.getElementById("message");
+
+
+    /* CHECK NAME */
+
+    if (name === "") {
+
+        message.textContent =
+            "⚠️ Please enter your name.";
+
+        return;
+
+    }
+
+
+    /* CHECK EMAIL */
+
+    if (email === "") {
+
+        message.textContent =
+            "⚠️ Please enter your email.";
+
+        return;
+
+    }
+
+
+    /* CHECK GAME */
+
+    if (selectedGame === "") {
+
+        message.textContent =
+            "⚠️ Please select a game.";
+
+        return;
+
+    }
+
+
+    /*
+       SAVE PLAYER INFORMATION
+       SO THE GAME CAN USE IT.
+    */
+
+    localStorage.setItem(
+        "playerName",
+        name
+    );
+
+
+    localStorage.setItem(
+        "playerEmail",
+        email
+    );
+
+
+    localStorage.setItem(
+        "selectedGame",
+        selectedGame
+    );
+
+
+    /*
+       OPEN THE ACTUAL GAME
+    */
+
+    if (selectedGame === "Carrom") {
+
+        window.location.href =
+            "carrom.html";
+
+    }
+
+    else if (selectedGame === "Ludo") {
+
+        window.location.href =
+            "ludo.html";
+
+    }
+
+    else if (selectedGame === "Tic-Tac-Toe") {
+
+        window.location.href =
+            "tic-tac-toe.html";
+
+    }
+
+}
+
+</script>
+
+</body>
+
+</html>
